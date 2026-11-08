@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Build all targets
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Generate checksums
+        run: |
+          cd zig-out/bin
+          sha256sum hello-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Smoke test (x86_64)
+        run: ./zig-out/bin/hello-x86_64-linux
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            zig-out/bin/hello-*
+            zig-out/bin/SHA256SUMS
+          generate_release_notes: true
