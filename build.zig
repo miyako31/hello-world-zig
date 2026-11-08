@@ -1,29 +1,23 @@
 const std = @import("std");
 
-// Target list: statically linked Linux binaries (musl) for x86, x86_64, and aarch64.
-const targets = [_]std.Target.Query{
-    .{ .cpu_arch = .x86, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .musl },
-    .{ .cpu_arch = .aarch64, .os_tag = .linux, .abi = .musl },
-};
-
+// Builds a single hello-world executable for the target given by -Dtarget.
+// The full target matrix is driven by scripts/build-os.sh and the GitHub
+// Actions workflow, so that each combination can fail independently.
 pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Build one executable per target and install all of them in zig-out/bin.
     // Output names follow the pattern: hello-<arch>-<os>
-    for (targets) |query| {
-        const resolved = b.resolveTargetQuery(query);
-        const arch = @tagName(resolved.result.cpu.arch);
-        const os = @tagName(resolved.result.os.tag);
+    // (Windows targets get the .exe suffix automatically.)
+    const arch = @tagName(target.result.cpu.arch);
+    const os = @tagName(target.result.os.tag);
 
-        const exe = b.addExecutable(.{
-            .name = b.fmt("hello-{s}-{s}", .{ arch, os }),
-            .root_source_file = b.path("src/main.zig"),
-            .target = resolved,
-            .optimize = optimize,
-        });
+    const exe = b.addExecutable(.{
+        .name = b.fmt("hello-{s}-{s}", .{ arch, os }),
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
-        b.installArtifact(exe);
-    }
+    b.installArtifact(exe);
 }
